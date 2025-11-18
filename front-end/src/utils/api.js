@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/tasks";
+import { API } from "../config/api";
 
 /**
  * Fetches all tasks from the backend API, handles the nested response structure,
@@ -7,7 +7,7 @@ const API_URL = "http://localhost:5000/api/tasks";
  */
 export async function fetchTasks() {
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(API.TASKS);
 
     if (!response.ok) {
       // If response is not OK, try to read the JSON error body
@@ -39,7 +39,7 @@ export async function fetchTasks() {
 
 export async function addTasks(taskData) {
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(API.TASKS, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,7 +83,7 @@ export async function addTasks(taskData) {
  */
 export async function updateTaskStatus(taskId, newStatus) {
   try {
-    const response = await fetch(`${API_URL}/${taskId}`, {
+    const response = await fetch(`${API.TASKS}/${taskId}`, {
       method: "PATCH", // Use PATCH for partial updates
       headers: {
         "Content-Type": "application/json",
@@ -121,7 +121,7 @@ export async function updateTaskStatus(taskId, newStatus) {
  */
 export async function deleteTask(taskId) {
   try {
-    const response = await fetch(`${API_URL}/${taskId}`, {
+    const response = await fetch(`${API.TASKS}/${taskId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -146,7 +146,7 @@ export async function deleteTask(taskId) {
 
 export async function clearAllTasks() {
   try {
-    const response = await fetch(`${API_URL}/clear`, {
+    const response = await fetch(`${API.TASKS}/clear`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
