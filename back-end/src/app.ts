@@ -1,11 +1,30 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import taskRoutes from './routes/taskRoutes';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app: Application = express();
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173' })); // Allow frontend origin
+// Get allowed origins from env
+const allowedOrigins = process.env.FRONTEND_URLS
+    ? process.env.FRONTEND_URLS.split(',')
+    : [];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like Postman)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+}));
 app.use(express.json());
 
 // Basic health check
