@@ -23,6 +23,7 @@ export function taskReducer(state, action) {
       return {
         ...state,
         loading: false,
+        actionLoadingId: null,
         error: action.payload, // Set the error message
       };
 
@@ -51,33 +52,53 @@ export function taskReducer(state, action) {
         tasks: state.tasks.filter((task) => task.id !== action.payload),
       };
 
-    case ActionType.UPDATE_SUCCESS: {
-      const updatedTask = action.payload;
-
+    case ActionType.UPDATE_SUCCESS:
+      // The component must dispatch ACTION_SUCCESS after this completes
       return {
         ...state,
         tasks: state.tasks.map((task) =>
-          task.id === updatedTask.id ? updatedTask : task
+          task.id === action.payload.id ? action.payload : task
         ),
+        error: null,
       };
-    }
 
-    case ActionType.DELETE_SUCCESS: {
-      // The payload is the ID of the task that was successfully deleted
-      const deletedId = action.payload;
-
+    case ActionType.DELETE_SUCCESS:
+      // The component must dispatch ACTION_SUCCESS after this completes
       return {
         ...state,
-        // Filter out the task that matches the deleted ID
-        tasks: state.tasks.filter((task) => task.id !== deletedId),
+        tasks: state.tasks.filter((task) => task.id !== action.payload),
+        error: null,
       };
-    }
 
     case ActionType.CLEAR_ALL_TASKS:
       return {
         ...state,
         tasks: [], // Clear all tasks
       };
+
+    case ActionType.SET_FILTER:
+      return {
+        ...state,
+        filter: action.payload, // payload will be 'ALL', 'ACTIVE', or 'COMPLETED'
+      };
+    case ActionType.SET_SORT:
+      return {
+        ...state,
+        sortBy: action.payload, // payload will be a sort key like 'TITLE_ASC'
+      };
+
+    case ActionType.ACTION_START:
+      // Payload is the ID of the task being operated on (or a generic string like 'NEW_TASK')
+      return { ...state, actionLoadingId: action.payload, error: null };
+
+    case ActionType.ACTION_SUCCESS:
+    case ActionType.ACTION_ERROR: // Handle success or error to clear the loading indicator
+      return { ...state, actionLoadingId: null };
+    // Update ADD_SUCCESS, UPDATE_SUCCESS, DELETE_SUCCESS to use ACTION_SUCCESS
+    // For example:
+    case ActionType.ADD_SUCCESS:
+      // The component must dispatch ACTION_SUCCESS after this completes
+      return { ...state, tasks: [...state.tasks, action.payload], error: null };
     default:
       throw new Error(`Unhandled action type: ${action.type}`);
   }

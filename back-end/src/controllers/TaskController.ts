@@ -72,7 +72,6 @@ export const getTaskById = async (req: Request, res: Response): Promise<void> =>
 
 
 export const updateTask = async (req: Request, res: Response): Promise<void> => {
-
     try {
         const taskId: string = req.params.id;
         const { title, description, isCompleted } = req.body;
@@ -90,7 +89,16 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
             res.status(404).json({ message: 'Task not found' });
             return;
         }
-        res.status(200).json(updatedTask);
+        res.status(200).json({
+            message: 'Task updated successfully', data: {
+                task: {
+                    id: updatedTask._id,
+                    title: updatedTask.title,
+                    description: updatedTask.description,
+                    isCompleted: updatedTask.isCompleted
+                }
+            }
+        });
 
     } catch (error) {
         res.status(500).json({ Message: 'Server Error', error });

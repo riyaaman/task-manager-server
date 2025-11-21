@@ -168,3 +168,38 @@ export async function clearAllTasks() {
     throw error;
   }
 }
+
+
+
+export async function updateTask(taskId, updates) {
+  try {
+    const response = await fetch(`${API.TASKS}/${taskId}`, {
+      method: "PUT", 
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updates), 
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! Status: ${response.status}`
+      );
+    }
+
+    // Backend should return the updated task, potentially wrapped
+    const fullResponse = await response.json();
+
+    // Assuming your successful response format is: { message: "Success", data: { task: {...} } }
+    if (!fullResponse.data || !fullResponse.data.task) {
+      throw new Error("Invalid API response format for update task.");
+    }
+
+    // Return ONLY the server-confirmed task object
+    return fullResponse.data.task;
+  } catch (error) {
+    console.error("API Update Task Error:", error);
+    throw error;
+  }
+}
