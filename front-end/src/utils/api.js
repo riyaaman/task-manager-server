@@ -81,7 +81,7 @@ export async function addTasks(taskData) {
  * @param {boolean} newStatus The new isCompleted status (true/false).
  * @returns {Promise<object>} A promise that resolves to the server-confirmed, updated task object.
  */
-export async function updateTaskStatus(taskId, newStatus) {
+export async function updateTaskStatus({ taskId, newStatus }) {
   try {
     const response = await fetch(`${API.TASKS}/${taskId}`, {
       method: "PATCH", // Use PATCH for partial updates
@@ -109,7 +109,7 @@ export async function updateTaskStatus(taskId, newStatus) {
     // Return ONLY the server-confirmed task object
     return fullResponse.data.task;
   } catch (error) {
-    console.error("API Update Task Error:", error);
+    console.error("API Update Task statusError:", error);
     throw error;
   }
 }
@@ -169,16 +169,14 @@ export async function clearAllTasks() {
   }
 }
 
-
-
-export async function updateTask(taskId, updates) {
+export async function updateTask({ taskId, updates }) {
   try {
     const response = await fetch(`${API.TASKS}/${taskId}`, {
-      method: "PUT", 
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(updates), 
+      body: JSON.stringify(updates),
     });
 
     if (!response.ok) {
@@ -191,7 +189,6 @@ export async function updateTask(taskId, updates) {
     // Backend should return the updated task, potentially wrapped
     const fullResponse = await response.json();
 
-    // Assuming your successful response format is: { message: "Success", data: { task: {...} } }
     if (!fullResponse.data || !fullResponse.data.task) {
       throw new Error("Invalid API response format for update task.");
     }

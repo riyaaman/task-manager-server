@@ -1,106 +1,65 @@
 import React, { useState } from "react";
-import { useTasks } from "../hooks/useTasks";
-import { updateTask, deleteTask } from "../utils/api";
-import { ActionType } from "../constants/taskReducerConstants";
-import toast from "react-hot-toast";
+import { useTaskQuery } from "../hooks/useTaskQuery"; // Imports all mutation logic
 
 function EditableTask({ task }) {
-  const { state, dispatch } = useTasks();
+  // Get mutation functions and their respective loading states from React Query
+  const { updateTask, deleteTask, isUpdating, isDeleting, updateTaskStatus } =
+    useTaskQuery();
 
-  // Check if THIS specific task is currently processing an action
-  const isProcessing = state.actionLoadingId === task.id;
-
-  // Local State
+  // Local UI State for editing
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.title);
 
-  // --- API Handlers ---
+  // Granular Loading Check: The component knows if ANY update/delete mutation is currently running
+  const isProcessing = isUpdating || isDeleting;
 
-  // Single-click handler (Status Toggle)
-  const handleToggleComplete = async (event) => {
-    event.stopPropagation();
-    if (isProcessing) return; // Guard against rapid clicks
-
-    try {
-      //START: Dispatch action start with task ID
-      dispatch({ type: ActionType.ACTION_START, payload: task.id });
-      const updates = { isCompleted: !task.isCompleted };
-      const serverTask = await updateTask(task.id, updates);
-
-      // SUCCESS: Dispatch update
-      dispatch({ type: ActionType.UPDATE_SUCCESS, payload: serverTask });
-
-      // END: Dispatch action success
-      dispatch({ type: ActionType.ACTION_SUCCESS });
-    } catch (error) {
-      //   dispatch({
-      //     type: ActionType.FETCH_ERROR,
-      //     payload: `Failed to toggle: ${error.message}`,
-      //   });
-      //   dispatch({ type: ActionType.ACTION_ERROR });
-
-      //  Use the toast function directly
-      toast.error(`Failed to toggle status: ${error.message}`);
-    }
+  // Style for display mode
+  const style = {
+    textDecoration: task.isCompleted ? "line-through" : "none",
+    // Visually fade the text if an action is pending
+    opacity: isProcessing ? 0.6 : 1,
   };
 
-  // Save Edit handler (Enter/Blur)
-  const handleSaveEdit = async () => {
+  // --- API Handlers (Calls React Query Mutations) ---
+
+  // Handler for Checkbox Change (Status Toggle)
+  const handleToggleComplete = (event) => {
+    event.stopPropagation();
+    if (isProcessing) return;
+
+    // Call the updateTask mutation with the necessary ID and updates object
+    updateTaskStatus({ taskId: task.id, newStatus: !task.isCompleted });
+  };
+
+  // Handler for Deleting Task
+  const handleDeleteTask = (e) => {
+    e.stopPropagation();
+    if (isProcessing) return;
+
+    // Call the deleteTask mutation
+    deleteTask(task.id);
+  };
+
+  // Handler for Saving Edits (Enter/Blur)
+  const handleSaveEdit = () => {
     const trimmedText = editText.trim();
-    if (trimmedText === "" || trimmedText === task.title) {
+
+    // If text is empty, unchanged, or if a mutation is already running, exit edit mode
+    if (trimmedText === "" || trimmedText === task.title || isProcessing) {
       setIsEditing(false);
       setEditText(task.title);
       return;
     }
 
-    try {
-      const updates = { title: trimmedText };
-      const serverTask = await updateTask(task.id, updates);
-
-      dispatch({
-        type: ActionType.UPDATE_SUCCESS,
-        payload: serverTask,
-      });
-
-      setIsEditing(false);
-    } catch (error) {
-      dispatch({
-        type: ActionType.FETCH_ERROR,
-        payload: `Failed to save edit: ${error.message}`,
-      });
-    }
-  };
-
-  // Delete handler
-  // Handler for Deleting Task
-  const handleDeleteTask = async (taskId) => {
-    if (isProcessing) return;
-
-    try {
-      // 1. START: Dispatch action start
-      dispatch({ type: ActionType.ACTION_START, payload: taskId });
-
-      await deleteTask(taskId);
-
-      // 2. SUCCESS: Dispatch delete
-      dispatch({ type: ActionType.DELETE_SUCCESS, payload: taskId });
-
-      // 3. END: Dispatch action success
-      dispatch({ type: ActionType.ACTION_SUCCESS });
-    } catch (error) {
-      // 3. END (Error): Dispatch action error
-      dispatch({
-        type: ActionType.FETCH_ERROR,
-        payload: `Failed to delete: ${error.message}`,
-      });
-      dispatch({ type: ActionType.ACTION_ERROR });
-    }
+    // Call the updateTask mutation with the new title
+    updateTask({ taskId: task.id, updates: { title: trimmedText } });
+    setIsEditing(false);
   };
 
   // --- Rendering Logic ---
 
   if (isEditing) {
-    // Edit View (Input field)
+    // Render Edit View (Input field)
     return (
       <div className="task-edit-container">
         <input
@@ -112,7 +71,7 @@ function EditableTask({ task }) {
             if (e.key === "Enter") handleSaveEdit();
             if (e.key === "Escape") {
               setIsEditing(false);
-              setEditText(task.title); // Revert on escape
+              setEditText(task.title);
             }
           }}
           autoFocus
@@ -122,37 +81,37 @@ function EditableTask({ task }) {
     );
   }
 
-  // Display View (Standard Look)
+  // Render Display View (Standard Look with Checkbox and Delete Button)
   return (
     <div className="task-display-container">
       {/* 1. STATUS CHECKBOX */}
       <input
         type="checkbox"
         checked={task.isCompleted}
-        onChange={handleToggleComplete} // Use the new handler
+        onChange={handleToggleComplete}
         className="task-status-checkbox"
-        // Disable if the user tries to edit the text while network is busy (Day 17, Part 2 concept)
-        // disabled={actionLoadingId === task.id}
+        disabled={isProcessing} // Disabled by the granular loading state
       />
-      {/* Task Title Area - Handles Toggle (click) and Edit (double-click) */}
+
+      {/* 2. TASK TITLE (Double-click to edit) */}
       <span
-        style={{ opacity: isProcessing ? 0.6 : 1 }}
-        onDoubleClick={() => setIsEditing(true)}
-        //onClick={handleToggleComplete}
+        style={style}
+        onDoubleClick={() => {
+          if (!isProcessing) setIsEditing(true); // Only allow edit if not processing
+        }}
+        // Note: The click handler for status toggle is now ONLY on the checkbox
       >
         {task.title}
       </span>
 
-      {/* Delete Button - Needs stopPropagation */}
+      {/* 3. DELETE BUTTON */}
       <button
         className="delete-button"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleDeleteTask(task.id);
-        }}
-        disabled={isProcessing} // DISABLE BUTTON while processing
+        onClick={handleDeleteTask}
+        disabled={isProcessing} // Disabled by the granular loading state
       >
-        {isProcessing ? "..." : "❌"} {/* Show processing indicator */}
+        {/* Visual feedback changes based on state */}
+        {isProcessing ? "..." : "❌"}
       </button>
     </div>
   );
